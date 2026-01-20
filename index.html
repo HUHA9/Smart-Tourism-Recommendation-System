@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Travel Recommender — Login / Register</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
+    html,body{height:100%}
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#f3f7fb;
+      overflow:hidden;
+    }
+
+    /* background */
+    .bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+}
+
+.bg.active {
+  opacity: 1;
+}
+
+
+    .card {
+      width:420px;
+      background:rgba(255,255,255,0.96);
+      padding:32px;
+      border-radius:12px;
+      box-shadow:0 14px 40px rgba(30,60,100,0.12);
+    }
+    h1{font-size:20px;color:#1e90ff;margin-bottom:14px;text-align:center}
+    .form-group{margin-bottom:12px}
+    label{display:block;margin-bottom:6px;color:#333;font-weight:600}
+    input[type="text"],
+input[type="password"]{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #e6edf6;
+  font-size:15px;
+}
+
+    .btn {
+      width:100%;padding:12px;border-radius:8px;border:none;background:#1e90ff;color:#fff;font-weight:700;
+      cursor:pointer;margin-top:8px;
+    }
+    .link {text-align:center;margin-top:10px;color:#1e90ff;cursor:pointer;font-weight:600}
+    .small{font-size:13px;color:#666;text-align:center;margin-top:8px}
+    .msg{font-size:13px;text-align:center;margin-top:8px;color:#d9534f;display:none}
+    .msg.ok{color:#2e7d32}
+    .hidden{display:none}
+  </style>
+
+  <!-- preload local images -->
+  <link rel="preload" href="images/index1.jpg" as="image">
+  <link rel="preload" href="images/index2.jpg" as="image">
+  <link rel="preload" href="images/index3.jpg" as="image">
+</head>
+<body>
+
+  <!-- background element -->
+  <div id="bgA" class="bg active"></div>
+  <div id="bgB" class="bg"></div>
+
+
+  <div class="card" id="card">
+    <h1 id="cardTitle">Welcome — Please login</h1>
+
+    <!-- LOGIN form (visible by default) -->
+    <form id="loginForm" autocomplete="on">
+      <div class="form-group">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" placeholder="Enter username" required />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+         <input id="loginPassword" type="password" placeholder="Enter password" required />
+        </div>
+      <div id="loginMsg" class="msg"></div>
+      <button class="btn" type="submit">Login</button>
+      <div class="small">Don't have an account? <span id="showRegister" class="link">Register</span></div>
+    </form>
+
+    <!-- REGISTER form (hidden by default) -->
+    <form id="registerForm" class="hidden" autocomplete="on">
+      <div class="form-group">
+        <label for="regUser">Choose username</label>
+        <input id="regUser" type="text" placeholder="Choose a username" required />
+      </div>
+      <div class="form-group">
+        <label for="regPassword">Password</label>
+        <input id="regPassword" type="password" placeholder="Enter password" required />
+      </div>
+      <div id="regMsg" class="msg"></div>
+      <button class="btn" type="submit">Create account</button>
+      <div class="small">Already registered? <span id="showLogin" class="link">Login</span></div>
+    </form>
+  </div>
+
+<script>
+/*
+  Behavior:
+  - loginForm visible by default, registerForm hidden
+  - if login username not found => alert in English and switch to register (prefill fields), but DO NOT auto-login
+  - if register succeeds => show success message, switch to login and prefill login fields (do not auto-login)
+  - only on login success we set localStorage 'username' and redirect to main.html
+  - background uses local files: images/index1.jpg, index2.jpg, index3.jpg
+*/
+
+(function(){
+  // background images (user-specified filenames)
+  const bgList = [
+  'images/index1.jpg',
+  'images/index2.jpg',
+  'images/index3.jpg'
+];
+
+// preload
+bgList.forEach(src => {
+  const img = new Image();
+  img.src = src;
+});
+
+const bgA = document.getElementById('bgA');
+const bgB = document.getElementById('bgB');
+
+let index = 0;
+let showingA = true;
+
+// 初始图
+bgA.style.backgroundImage = `url('${bgList[0]}')`;
+bgA.classList.add('active');
+
+function rotateBg() {
+  const nextIndex = (index + 1) % bgList.length;
+
+  const show = showingA ? bgB : bgA;
+  const hide = showingA ? bgA : bgB;
+
+  show.style.backgroundImage = `url('${bgList[nextIndex]}')`;
+  show.classList.add('active');
+  hide.classList.remove('active');
+
+  showingA = !showingA;
+  index = nextIndex;
+}
+
+// 每张图停留 12 秒
+setInterval(rotateBg, 12000);
+
+
+  // forms and UI nodes
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const showRegister = document.getElementById('showRegister');
+  const showLogin = document.getElementById('showLogin');
+  const cardTitle = document.getElementById('cardTitle');
+
+  const loginUser = document.getElementById('loginUser');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginMsg = document.getElementById('loginMsg');
+
+  const regUser = document.getElementById('regUser');
+  const regPassword = document.getElementById('regPassword');
+  const regMsg = document.getElementById('regMsg');
+
+  // helper key
+  function userKey(u){ return 'user_' + u; }
+
+  // show register form
+  showRegister.addEventListener('click', ()=>{
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+    cardTitle.textContent = 'Create your account';
+    clearMessages();
+  });
+
+  // show login form
+  showLogin.addEventListener('click', ()=>{
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    cardTitle.textContent = 'Welcome — Please login';
+    clearMessages();
+  });
+
+  function clearMessages(){
+    loginMsg.style.display = 'none'; loginMsg.textContent = '';
+    regMsg.style.display = 'none'; regMsg.textContent = '';
+  }
+
+  // Register submit
+  registerForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    clearMessages();
+    const u = regUser.value.trim();
+    const p = regPassword.value.trim();
+    if(!u || !p){
+      regMsg.textContent = 'Please enter username and password ';
+      regMsg.style.display = 'block';
+      return;
+    }
+    const key = userKey(u);
+    if(localStorage.getItem(key)){
+      regMsg.textContent = 'Username already exists — please login instead';
+      regMsg.style.display = 'block';
+      return;
+    }
+    // create profile (do NOT auto-login)
+    const profile = {
+      username: u,
+      password: p,
+      prefTags: [],
+      liked: [],
+      homeLocation: null,
+      history: []
+    };
+    localStorage.setItem(key, JSON.stringify(profile));
+
+    // success: show success message then switch to login and pre-fill login fields
+    regMsg.textContent = 'Account created successfully. Please login.';
+    regMsg.classList.remove('msg'); // ensure class present
+    regMsg.classList.add('msg','ok');
+    regMsg.style.display = 'block';
+
+    // switch back to login after short delay so user sees msg
+    setTimeout(()=>{
+      registerForm.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+      cardTitle.textContent = 'Welcome — Please login';
+      // prefill login inputs
+      loginUser.value = u;
+      loginPassword.value = p;
+      // reset regMsg style back to error color for future uses
+      regMsg.classList.remove('ok');
+      regMsg.classList.add('msg');
+      regMsg.style.display = 'none';
+    }, 900);
+  });
+
+  // Login submit
+  loginForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    clearMessages();
+    const u = loginUser.value.trim();
+    const p = loginPassword.value.trim();
+    if(!u || !p){
+      loginMsg.textContent = 'Please enter username and password';
+      loginMsg.style.display = 'block';
+      return;
+    }
+    const key = userKey(u);
+    const raw = localStorage.getItem(key);
+    if(!raw){
+      // user not found -> alert in English, switch to register and prefill fields
+      alert('User not found. Please register.');
+      regUser.value = u;
+      regPassword.value = p;
+      // switch UI
+      loginForm.classList.add('hidden');
+      registerForm.classList.remove('hidden');
+      cardTitle.textContent = 'Create your account';
+      return;
+    }
+    let profile;
+    try { profile = JSON.parse(raw); }
+    catch(e){
+      loginMsg.textContent = 'Stored user data corrupted. Please register again.';
+      loginMsg.style.display = 'block';
+      return;
+    }
+    if(profile.password !== p){
+  loginMsg.textContent = 'Password incorrect';
+  loginMsg.style.display = 'block';
+  return;
+}
+
+    // login success -> set global username and phone, then redirect
+    localStorage.setItem('username', u);
+    localStorage.setItem('password', p);
+
+    // optionally update geolocation into profile (non-blocking)
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const cur = JSON.parse(localStorage.getItem(key) || '{}');
+        cur.homeLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        localStorage.setItem(key, JSON.stringify(cur));
+        // redirect after updating (or we can redirect immediately)
+        window.location.href = 'main.html';
+      }, ()=> {
+        // user denied or failed location -> still redirect
+        window.location.href = 'main.html';
+      }, {timeout:3000});
+    } else {
+      window.location.href = 'main.html';
+    }
+  });
+
+  // On page load: if someone already logged in (localStorage.username) -> go to main directly
+  (function autoRedirectIfLogged(){
+    try {
+      const cur = localStorage.getItem('username');
+      if(cur){ // you may want to remove this auto-redirect in dev, but keep it for UX
+        // If you prefer NOT to auto-redirect when returning to login page, comment the next line.
+        // window.location.href = 'main.html';
+      }
+    } catch(e){}
+  })();
+
+})();
+</script>
+
+</body>
+</html>

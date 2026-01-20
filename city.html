@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>City Details</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      transition: background 0.6s ease-in-out;
+    }
+
+    .city-header {
+      text-align: center;
+      color: #fff;
+      text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    .attractions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 25px;
+      margin-top: 40px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      width: 300px;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+
+    .card-content {
+      padding: 15px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .heart-button {
+  margin-top: 10px;
+  background-color: #ff6b81;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s;
+}
+
+.heart-button:hover {
+  background-color: #e55a71;
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+}
+
+/* ===== Fixed Tip Strip (Top Left) ===== */
+#tipBox {
+  position: fixed;
+  top: 10px;       
+  left: 20px;      
+  max-width: 480px; /* 稍微收窄一点 */
+  padding: 10px 18px;
+
+  background: #1e90ff;   /* ✅ 正常蓝色 */
+  color: #ffffff;
+
+  font-size: 13.5px;
+  line-height: 1.6;
+
+  border-radius: 999px;  /* 细长胶囊 */
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+
+  z-index: 999;
+
+  /* 为滚动动画准备 */
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+/* ===== Tip scroll shrink & fade ===== */
+#tipBox.shrink {
+  opacity: 0;
+  transform: scale(0.92) translateY(-10px);
+  pointer-events: none;
+}
+
+.trip-added {
+  background-color: #2ecc71 !important;
+  cursor: default;
+}
+
+
+  </style>
+</head>
+<!-- 新增：引入用户档案与推荐逻辑 -->
+<script src="scripts/utils.js"></script>
+<script src="scripts/attractions.js"></script>
+<script src="scripts/recommend.js"></script>
+
+<body>
+  <div class="city-header">
+    <h1 id="cityName">Loading...</h1>
+    <p id="cityDetails"></p>
+  </div>
+
+  <!-- ===== Tokyo Filter Section (ONLY FOR TOKYO) ===== -->
+<div id="filterSection"
+style="margin-top:20px; text-align:center; color:white; display:none;">
+<label><input type="checkbox" class="filter-checkbox" value="shopping" checked> Shopping</label>
+<label><input type="checkbox" class="filter-checkbox" value="culture" checked> Culture</label>
+<label><input type="checkbox" class="filter-checkbox" value="tech" checked> Tech</label>
+<label><input type="checkbox" class="filter-checkbox" value="themeparks" checked> Themeparks</label>
+<label><input type="checkbox" class="filter-checkbox" value="nature" checked> Nature</label>
+</div>
+
+
+  <div class="attractions" id="attractionsContainer"></div>
+
+  <script>
+    const data = [// 外国地点
+{
+id: 1,
+name: 'Paris',
+image: 'https://images.unsplash.com/photo-1431274172761-fca41d930114?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'The city of love and lights',
+details: 'Paris is the capital of France, known for its art, fashion, gastronomy and culture. The 19th-century cityscape is crisscrossed by wide boulevards and the River Seine. Major landmarks include the Eiffel Tower, Notre-Dame Cathedral and the Louvre Museum.',
+attractions: [
+{
+name: 'Eiffel Tower',
+image: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Iconic iron tower offering city views and dining options'
+},
+{
+name: 'Louvre Museum',
+image: 'https://images.unsplash.com/photo-1444418776041-9c7e33cc5a9c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'World\'s largest art museum and historic monument'
+},
+{
+name: 'Notre-Dame Cathedral',
+image: 'https://img95.699pic.com/photo/50123/5271.jpg_wh860.jpg',
+description: 'Medieval Catholic cathedral with Gothic architecture'
+},
+{
+name: 'Champs-Élysées',
+image: 'https://www.egali.com.br/wp-content/uploads/2019/12/flynn-zhou-NVGqJvdyQLs-unsplash-1.jpg',
+description: 'A world-famous avenue known for its theaters, cafés, and luxury shops.'
+},
+{
+name: 'Palace of Versailles',
+image: 'https://pic.yupoo.com/fotomag/ad6b2527/843e3d71.jpg',
+description: 'A grand palace and former royal residence, renowned for its gardens and Hall of Mirrors.'
+}
+]
+},
+{
+id: 2,
+name: 'Tokyo',//东京
+image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Vibrant metropolis blending tradition and modernity',
+details: 'Tokyo, Japan\'s busy capital, mixes the ultramodern and the traditional, from neon-lit skyscrapers to historic temples. Must-visit spots include the Meiji Shinto Shrine, the Imperial Palace and the bustling Shibuya Crossing.',
+attractions: [
+{
+name: 'Shibuya Crossing',
+image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'World\'s busiest pedestrian crossing with neon lights',
+category: 'shopping'
+},
+{
+name: 'Meiji Shrine',
+image: 'https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Tranquil Shinto shrine surrounded by forest',
+category: 'culture'
+},
+{
+name: 'Tokyo Tower',
+image: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Eiffel Tower-inspired landmark with observation decks',
+category: 'tech'
+},
+{
+name: 'Senso-ji Temple',
+image: 'https://tmyun.com/jpeg/yun_17964.jpg',
+description: 'Tokyo’s oldest temple, located in the historic Asakusa district.',
+category: 'culture'
+},
+{
+name: 'Tokyo Skytree',
+image: 'https://s1.kkday.com/images/product/10759/20170116074826_VMRPO.jpg',
+description: 'The tallest structure in Japan with observation decks and a shopping complex.',
+category: 'tech'
+},
+//新增景点-日本
+{
+    name: 'Shinjuku Kabukicho',
+    image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=500',
+    description: 'The neon-lit nightlife district full of entertainment.',
+    category: 'shopping'
+  },
+  {
+    name: 'Ginza Shopping District',
+    image: 'https://pic4.zhimg.com/v2-279185ba381d84a82bce9f24dee4996c_r.jpg?source=1940ef5c',
+    description: 'Luxury shopping and dining hub in central Tokyo.',
+    category: 'shopping'
+  },
+  {
+    name: 'Imperial Palace East Gardens',
+    image: 'https://media-cdn.tripadvisor.com/media/attractions-splice-spp-674x446/13/61/a9/05.jpg',
+    description: 'Peaceful historic gardens beside the Imperial residence.',
+    category: 'nature'
+  },
+  {
+    name: 'TeamLab Borderless (Odaiba)',
+    image: 'https://images.squarespace-cdn.com/content/v1/55fb5ba0e4b0f81e4e52f39a/1573252219337-15ENEV1O1CFRMWSTOZEM/timelab-borderless-shangai-01',
+    description: 'Immersive interactive digital art museum.',
+    category: 'tech'
+  },
+  {
+    name: 'Tokyo Disneyland',
+    image: 'https://youimg1.c-ctrip.com/target/fd/tg/g2/M02/43/08/CghzgFVtmyiALqJlACMQkexwVZg304.jpg',
+    description: 'Magical theme park with rides and parades.',
+    category: 'themeparks'
+  },
+  {
+    name: 'Tokyo DisneySea',
+    image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=500',
+    description: 'Unique fantasy sea-themed adventure park.',
+    category: 'themeparks'
+  },
+  {
+    name: 'Odaiba Seaside Park',
+    image: 'https://www.gotokyo.org/en/spot/39/images/486_0343_1_950x637.jpg',
+    description: 'Relaxing seaside area with bay views.',
+    category: 'nature'
+  },
+  {
+    name: 'Akihabara Electric Town',
+    image: 'https://youimg1.c-ctrip.com/target/0105d1200082eomql8481_W_10000_1200.jpg?proc=autoorient',
+    description: 'Tech, anime, and gaming paradise.',
+    category: 'tech'
+  }
+]
+},
+{
+id: 3,
+name: 'Rome',//罗马
+image: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Eternal city with ancient history',
+details: 'Rome is the capital of Italy and was once the center of the ancient Roman Empire. Must-see attractions include the Colosseum, Roman Forum, Pantheon and Vatican City, home to St. Peter\'s Basilica and the Vatican Museums.',
+attractions: [
+{
+name: 'Colosseum',
+image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Ancient amphitheater that held gladiator contests'
+},
+{
+name: 'Trevi Fountain',
+image: 'https://youimg1.c-ctrip.com/target/1006160000010gnh156CC.jpg',
+description: 'Baroque fountain where visitors toss coins'
+},
+{
+name: 'Pantheon',
+image: 'https://youimg1.c-ctrip.com/target/100d0y000000mai8r2FF0.jpg',
+description: 'Ancient Roman temple with a domed roof'
+},
+{
+name: 'St. Peter’s Basilica',
+image: 'https://img1.qunarzz.com/travel/d4/1805/27/3da46a32449c2bb5.jpg',
+description: 'A Renaissance-era basilica in Vatican City, home to iconic art and architecture.'
+},
+{
+name: 'Roman Forum',
+image: 'https://youimg1.c-ctrip.com/target/100m1c000001dol2jC1EC.jpg',
+description: 'Ruins of ancient government buildings at the heart of ancient Rome.'
+}
+]
+},
+// 中国地点
+
+  {
+    id: 4,
+    name: 'Beijing',//北京
+    image: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    description: 'The capital of China, rich in historical and cultural heritage.',
+    details: 'Beijing is a historic and cultural city in China, home to famous sites like the Forbidden City, the Great Wall, and the Temple of Heaven. It is also a modern international metropolis.',
+    attractions: [
+      {
+        name: 'Forbidden City',
+        image: 'https://www.beijing.gov.cn/renwen/rwzyd/bwg/ggbwy/202301/W020230302518258830828.jpg',
+        description: 'Ancient imperial palace complex, a UNESCO World Heritage Site.'
+      },
+      {
+        name: 'Great Wall',
+        image: 'https://images.chinahighlights.com/allpicture/2014/07/a75e71599fcc40d1b72fb2b8_cut_800x500_61.jpg',
+        description: 'One of the New Seven Wonders of the World, ancient military defense project.'
+      },
+      {
+        name: 'Temple of Heaven',
+        image: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        description: 'Site of imperial ceremonies for worship and harvest prayers during Ming and Qing dynasties.'
+      },
+      {
+        name: 'Summer Palace',
+        image: 'https://www.bijingdi.com/uploadfile/2021/1127/20211127195738699.jpg',
+        description: 'Chinese imperial garden during the Qing Dynasty.'
+      },
+      {
+        name: 'National Museum of China',
+        image: 'https://youimg1.c-ctrip.com/target/10051f000001gsu0v03DD_D_10000_1200.jpg?proc=autoorient',
+        description: 'The National Museum of China has a history of more than 100 years, with a building area of ​​nearly 200,000 square meters and more than 1.4 million collections..'
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: 'Shanghai',//上海
+    image: 'https://pic.616pic.com/bg_w1180/00/06/51/KI1O6vvnbQ.jpg!/fw/1120',
+    description: 'The most international city in China.',
+    details: 'Shanghai is China’s center for economy, finance, trade, and shipping. Landmarks like the Bund and Oriental Pearl Tower show its blend of Eastern and Western cultures.',
+    attractions: [
+      {
+        name: 'The Bund',
+        image: 'https://youimg1.c-ctrip.com/target/tg/056/322/802/e6d37f503b5c462d929e84659cffb134.jpg',
+        description: 'Historical waterfront buildings by the Huangpu River, iconic Shanghai view.'
+      },
+      {
+        name: 'Oriental Pearl Tower',
+        image: 'https://www.brandinginasia.com/wp-content/uploads/2020/08/Shanghai-Branding-in-Asia.jpg',
+        description: 'Famous TV tower offering panoramic views of the city.'
+      },
+      {
+        name: 'Shanghai Disneyland',
+        image: 'https://youimg1.c-ctrip.com/target/10051f000001gsqk8D0BC_D_10000_1200.jpg?proc=autoorient',
+        description: 'A fantasy world full of joy and surprises.'
+      },
+      {
+      name: 'Yu Garden',
+      image: 'https://www.asiaodysseytravel.com/images/china-tours/group-tours/yu-garden-700-2.jpg',
+      description: 'A classical Chinese garden with pavilions, rockeries, and ponds.'
+    },
+    {
+      name: 'Nanjing Road',
+      image: 'https://pic1.k1u.com/k1u/mb/d/file/20200529/1590747196668672_836_10000.jpg',
+      description: 'A major shopping street known for its bright lights and vibrant atmosphere.'
+    }
+    ]
+  },
+  {
+    id: 6,
+    name: 'Xi’an',//西安
+    image: 'https://img1.qunarzz.com/travel/poi/1806/1e/e39e64be5446d537.jpg?ver=1',
+    description: 'A historic and cultural city of China.',
+    details: 'Xi’an is the starting point of the Silk Road and one of China’s Four Great Ancient Capitals. It features many historical sites like the Terracotta Army and Giant Wild Goose Pagoda.',
+    attractions: [
+      {
+        name: 'Terracotta Army',
+        image: 'https://ma7media.storage.googleapis.com/sites/default/files/styles/freeform_large_9_2x/s3/migrated/pictures/archiv_agy/2015/201505040925120.002.jpg?itok=aomAkGyM',
+        description: 'Burial pits of Emperor Qin Shi Huang, known as the Eighth Wonder of the World.'
+      },
+      {
+        name: 'Giant Wild Goose Pagoda',
+        image: 'https://www.chinatoursnet.com/uploads/main/litimg/2019-05-27/5ceb3d0638884.jpg',
+        description: 'Tang Dynasty Buddhist pagoda where monk Xuanzang translated scriptures.'
+      },
+      {
+        name: 'Datang Everbright City',
+        image: 'https://n.sinaimg.cn/sinakd20210222ac/725/w2000h1125/20210222/0b8c-kkmphps1384742.jpg',
+        description: 'With the prosperous Tang Dynasty culture as its background, it integrates cultural display, sightseeing, leisure and entertainment, shopping and dining. It is a landmark attraction and cultural business card of Xian.'
+      },
+      {
+      name: 'Ancient City Wall',
+      image: 'https://pic.52112.com/180702/JPG-180702_364/pt0zgIza7J_small.jpg',
+      description: 'A well-preserved fortification surrounding the old city of Xi’an.'
+    },
+{
+      name: 'Bell Tower of Xi’an',
+      image: 'https://youimg1.c-ctrip.com/target/100c0d0000006tbbg5863.jpg',
+      description: 'A symbol of Xi’an, located at the city’s center.'
+    }
+    ]
+  },
+  {
+    id: 7,
+    name: 'Kuala Lumpur',//吉隆坡
+    image: 'https://vincentloy.wordpress.com/wp-content/uploads/2017/07/35760010171_ef3509b067_h.jpg?w=584',
+    description: 'The capital of Malaysia.',
+    details: 'Kuala Lumpur is Malaysia’s capital, a modern city blending multicultural traditions, with landmarks like the Petronas Twin Towers.',
+    attractions: [
+      {
+        name: 'Petronas Twin Towers',
+        image: 'https://wallpaperaccess.com/full/6217300.jpg',
+        description: 'Iconic skyscrapers, the tallest twin towers in the world.'
+      },
+      {
+        name: 'Merdeka Square',
+        image: 'https://dimg04.c-ctrip.com/images/02Y0e120009f1wvxxEA50_R_1080_808_Q90.jpg',
+        description: 'Historic site marking Malaysia’s independence.'
+      },
+      {
+        name: 'Petaling Street',
+        image: 'https://tr-osdcp.qunarzz.com/tr-osd-tr-space/img/9b1c8952d39b6345fb7e2a61c72979a5.jpg_480x360x95_8ca79e8f.jpg',
+        description: 'Kuala Lumpur’s Chinatown, known for shopping and street food.'
+      },
+      {
+      name: 'Batu Caves',
+      image: 'https://n.sinaimg.cn/sinacn20123/213/w2048h1365/20190315/5487-hufnxfn9661372.jpg',
+      description: 'A limestone hill with a series of caves and Hindu shrines.'
+    },
+   
+    {
+      name: 'Bukit Bintang',
+      image: 'https://i.ytimg.com/vi/EyZ4d_GmQ6g/maxresdefault.jpg',
+      description: 'A lively shopping and entertainment district in central Kuala Lumpur.'
+    }
+    ]
+  },
+  {
+    id: 8,
+    name: 'Penang',//槟城
+    image: 'https://img1.qunarzz.com/travel/d9/1701/77/02d9a4cc890844b5.jpg_r_1360x1360x95_de462271.jpg',
+    description: 'Malaysia’s food paradise.',
+    details: 'Penang is famous for its cuisine and cultural heritage. George Town’s street art and multicultural architecture attract visitors from around the world.',
+    attractions: [
+      {
+        name: 'George Town Murals',
+        image: 'https://youimg1.c-ctrip.com/target/tg/107/550/624/7cc37cf6936246e1ad5c130befc84844.jpg',
+        description: 'Iconic street art, perfect for photo spots.'
+      },
+      {
+        name: 'Penang Hill',
+        image: 'https://tr-osdcp.qunarzz.com/tr-osd-tr-space/img/911209c1ffda17db8f2fe0397f049b08.jpg_480x360x95_c99ce9bb.jpg',
+        description: 'Highest point in Penang, offering panoramic city views.'
+      },
+      {
+        name: 'Kek Lok Si Temple',
+        image: 'https://media.istockphoto.com/id/1987296367/zh/%E7%85%A7%E7%89%87/kek-lok-si-temple-in-george-town.jpg?s=1024x1024&w=is&k=20&c=91w-WC2qnkD97KQl3VgUJBADhl6YupYvcDEIsJmI9_E=',
+        description: 'One of the most important Buddhist temples in Malaysia.'
+      },
+      {
+      name: 'Penang Peranakan Mansion',
+      image: 'https://thesmartlocal.my/wp-content/uploads/2022/09/image16-5-667x500.jpg',
+      description: 'A heritage mansion showcasing Peranakan culture and antiques.'
+    },
+    {
+      name: 'Gurney Drive',
+      image: 'https://www.anjnaglobal.com/img/Malaysia-Attraction-Tours/banner/Gurney-Drive.png',
+      description: 'A popular seafront promenade known for hawker food and shopping.'
+    }
+    ]
+  },
+  {
+    id: 9,
+    name: 'Langkawi',//兰卡威
+    image: 'https://img1.qunarzz.com/travel/d8/1703/9b/a4ace83b30185b5.jpg_r_1360x1360x95_ae5e9df3.jpg',
+    description: 'Malaysia’s resort paradise.',
+    details: 'Langkawi is famous for its beaches, duty-free shopping, and natural scenery—an ideal destination for relaxation.',
+    attractions: [
+      {
+        name: 'Sky Bridge',
+        image: 'https://img.freepik.com/photos-gratuite/structure-metallique-entre-montagnes_1122-2204.jpg?w=996&t=st=1697330142~exp=1697330742~hmac=9ca8e3ba51eb0e2db239d94364a4a5b832505ee8fcf6e7c84e7fdec38421075b',
+        description: 'Suspended steel bridge offering thrilling mountain views.'
+      },
+      {
+        name: 'Pantai Cenang',
+        image: 'https://cdn.pixabay.com/photo/2016/09/07/06/23/beach-1650889_1280.jpg',
+        description: 'Popular beach with white sands and clear water.'
+      },
+      {
+        name: 'Mangrove Forest',
+        image: 'https://langkawi-travel-6868.com/wp-content/uploads/2019/03/Langkawi-Eagle-Watching-02.jpg',
+        description: 'Unique ecosystem with boat tours available.'
+      },
+      {
+      name: 'Eagle Square',
+      image: 'https://img1.qunarzz.com/travel/d8/1703/7b/7e7843e1564c65b5.jpg_r_640x426x70_4709b834.jpg',
+      description: 'A prominent landmark featuring a giant eagle statue near the waterfront.'
+    },
+    {
+      name: 'Telaga Tujuh Waterfalls',
+      image: 'https://img1.qunarzz.com/piao/fusion/1611/66/45a926c00de45002.jpg',
+      description: 'The scenery around Qixianjing is full of green forests, and you can enjoy the whole mountain scenery.'
+    }
+    ]
+  }
+];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const cityId = parseInt(urlParams.get('id'));
+    const city = data.find(c => c.id === cityId);
+    
+    // ==== 自动切换城市背景 ====
+    const cityBackgrounds = {
+  "Paris": "images/bg-paris.jpg",
+  "Tokyo": "images/bg-tokyo.jpg",
+  "Rome": "images/bg-rome.jpg",
+  "Beijing": "images/beijing.jpg",
+  "Shanghai": "images/bg-shanghai.jpg",
+  "Xi’an": "images/bg-xian.jpg",
+  "Kuala Lumpur": "images/bg-kualalumpur.jpg",
+  "Penang": "images/bg-penang.jpg",
+  "Langkawi": "images/bg-langkawi.jpg"
+};
+
+    const bgUrl = cityBackgrounds[city?.name] || "images/bg-paris.jpg"; // 默认用巴黎
+    document.body.style.background = `
+      linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
+      url('${bgUrl}') center/cover fixed no-repeat
+    `;
+
+  
+    
+// ====== 在这里【新增】renderAttractions ======
+function renderAttractions(list) {
+  const container = document.getElementById('attractionsContainer');
+  container.innerHTML = "";
+
+  list.forEach(attraction => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const idKey = `${city.id}_${attraction.name.replace(/\s+/g,'_')}`;
+    const liked = isLiked(idKey);
+    const added = isInMyTrip(idKey);
+
+
+    card.innerHTML = `
+      <img src="${attraction.image}" alt="${attraction.name}" />
+      <div class="card-content">
+        <h3>${attraction.name}</h3>
+        <p>${attraction.description}</p>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <button class="heart-button"
+  style="${liked ? 'background:#c0392b' : ''}"
+  onclick="toggleLiked('${idKey}', this)">
+  ${liked ? '❤️ Liked' : '❤️ Like'}
+</button>
+
+
+<button class="heart-button"
+  style="background:${added ? '#2ecc71' : '#1e90ff'}"
+  ${added ? 'disabled' : ''}
+  onclick="
+    addToPlan({
+      id: '${idKey}',
+      name: '${attraction.name}',
+      city: '${city.name}',
+      lat: 0,
+      lng: 0,
+      image: '${attraction.image}',
+      durationMinutes: 90
+    });
+    this.innerText = '✔ Added';
+    this.classList.add('trip-added');
+    this.disabled = true;
+  ">
+  ${added ? '✔ Added' : '+ My Trip'}
+</button>
+
+
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+    // ==== 显示城市信息 ====
+
+    if (city) {
+      document.getElementById('cityName').textContent = city.name;
+      document.getElementById('cityDetails').textContent = city.details;
+
+      // ✅ ONLY show filter for Tokyo
+if (city.name === 'Tokyo') {
+  document.getElementById('filterSection').style.display = 'block';
+}
+renderAttractions(city.attractions);
+}
+
+      
+    else {
+      document.getElementById('cityName').textContent = 'City not found';
+    }
+    if (city && city.name === 'Tokyo') {
+
+function applyFilter() {
+  const active = Array.from(
+    document.querySelectorAll('.filter-checkbox')
+  )
+    .filter(cb => cb.checked)
+    .map(cb => cb.value);
+
+  const filtered = city.attractions.filter(a =>
+    active.includes(a.category)
+  );
+
+  renderAttractions(filtered);
+}
+
+document.querySelectorAll('.filter-checkbox').forEach(cb => {
+  cb.addEventListener('change', applyFilter);
+});
+}
+// ===== Liked Places: save to localStorage =====
+function saveLiked(placeId) {
+  let liked = [];
+
+  try {
+    liked = JSON.parse(localStorage.getItem('likedPlaces')) || [];
+  } catch (e) {
+    liked = [];
+  }
+
+  if (!liked.includes(placeId)) {
+    liked.push(placeId);
+    localStorage.setItem('likedPlaces', JSON.stringify(liked));
+    alert('Added to My Liked Places ❤️');
+  }
+}
+// ===== 状态判断函数（新增）=====
+function isLiked(placeId) {
+  const liked = JSON.parse(localStorage.getItem('likedPlaces') || '[]');
+  return liked.includes(placeId);
+}
+
+function isInMyTrip(placeId) {
+  const trip = JSON.parse(localStorage.getItem('myTrip') || '[]');
+  return trip.some(p => p.id === placeId);
+}
+
+function toggleLiked(placeId, btn) {
+  let liked = [];
+
+  try {
+    liked = JSON.parse(localStorage.getItem('likedPlaces')) || [];
+  } catch (e) {
+    liked = [];
+  }
+
+  if (liked.includes(placeId)) {
+    // 取消 Like
+    liked = liked.filter(id => id !== placeId);
+    btn.innerText = '❤️ Like';
+    btn.style.backgroundColor = '';
+  } else {
+    // 添加 Like
+    liked.push(placeId);
+    btn.innerText = '❤️ Liked';
+    btn.style.backgroundColor = '#c0392b';
+  }
+
+  localStorage.setItem('likedPlaces', JSON.stringify(liked));
+}
+
+    
+  </script>
+<!-- ✅ Fixed Tip Card (bottom-right) 右下角标语-->
+<div id="tipBox">
+  <strong>💡 Tips</strong><br>
+  Like attractions to save your favorites and improve future recommendations.<br>
+  Add places to <b>My Trip</b> to generate optimized travel routes on the homepage.
+</div>
+  
+<script>
+  const tipBox = document.getElementById('tipBox');
+
+  window.addEventListener('scroll', () => {
+    if (!tipBox) return;
+
+    if (window.scrollY > 120) {
+      tipBox.classList.add('shrink');
+    } else {
+      tipBox.classList.remove('shrink');
+    }
+  });
+</script>
+  <script src="scripts/tripEngine.js"></script>
+</body>
+</html>
+
+      

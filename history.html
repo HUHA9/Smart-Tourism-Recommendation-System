@@ -1,0 +1,127 @@
+<!DOCTYPE html> 
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Travel History</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+    h1 { color: #1e90ff; text-align: center; }
+    .record {
+      background: white; padding: 20px;
+      margin: 20px auto; max-width: 700px;
+      border: 2px solid #1e90ff; border-radius: 6px;
+    }
+    .btn {
+      display: block; text-align: center;
+      margin: 20px auto; padding: 10px 20px;
+      background: #1e90ff; color: white;
+      border-radius: 6px; text-decoration: none;
+    }
+    details {
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    details summary {
+      cursor: pointer;
+      color: #1e90ff;
+    }
+    details p {
+      margin: 6px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    .meta { color: #666; font-size: 13px; margin-bottom: 8px; }
+    .empty { text-align:center; color:#666; margin-top:40px; }
+  </style>
+</head>
+<body>
+
+<h1>My Travel History</h1>
+<div id="historyList"></div>
+<a href="main.html" class="btn">Back to Main</a>
+
+<script>
+  // 从当前登录用户的 profile (localStorage key: "user_<username>") 读取 history
+  const username = localStorage.getItem('username') || null;
+  const list = document.getElementById('historyList');
+
+  if (!username) {
+    list.innerHTML = "<p class='empty'>No user logged in. Please go back to the main page and log in.</p>";
+  } else {
+    const raw = localStorage.getItem('user_' + username);
+    let profile = null;
+    try {
+      profile = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.error("Failed to parse user profile:", e);
+      profile = null;
+    }
+
+    const history = (profile && Array.isArray(profile.history)) ? profile.history : [];
+
+    if (!history || history.length === 0) {
+  list.innerHTML = "<p class='empty'>No travel records found.</p>";
+} else {
+  // 按时间倒序显示（可选）
+  history.slice().reverse().forEach((item, idx) => {
+    const summary = item.summary || {};
+    const totalDistance = (typeof summary.totalDistance === 'number') ? summary.totalDistance.toFixed(2) + " km" : (summary.totalDistance ? String(summary.totalDistance) : "—");
+    const transport = summary.transport || "—";
+    const dayCount = Array.isArray(summary.days) ? summary.days.length : (item.days ? item.days.length : "—");
+
+    // 兼容不同可能的 createdAt 字段格式
+    let createdAt = item.createdAt || item.created_at || item.timestamp || item.createdAtTimestamp || null;
+    let createdDate;
+    if (!createdAt) createdDate = new Date();
+    else {
+      try {
+        createdDate = new Date(createdAt);
+        if (isNaN(createdDate)) createdDate = new Date(Number(createdAt));
+        if (isNaN(createdDate)) createdDate = new Date();
+      } catch (e) {
+        createdDate = new Date();
+      }
+    }
+
+    const div = document.createElement('div');
+    div.className = 'record';
+    // 核心修改：在原有HTML中新增 <p><strong>Simple Route:</strong> ${item.simpleRoute || "—"}</p> 这一行
+    div.innerHTML = `
+      <h3>Trip ${history.length - idx}</h3>
+      <div class="meta"><strong>Created:</strong> ${createdDate.toLocaleString()}</div>
+      <!-- 新增：显示整体简化路线 -->
+      <p><strong>Simple Route:</strong> ${item.simpleRoute || "—"}</p>
+      <p><strong>Days:</strong> ${dayCount}</p>
+      <p><strong>Total Distance:</strong> ${totalDistance}</p>
+      <p><strong>Transport Mode:</strong> ${transport}</p>
+      <details>
+        <summary><strong>View Daily Details</strong></summary>
+        ${renderDayList((summary.days || item.days || []))}
+      </details>
+    `;
+    list.appendChild(div);
+  });
+}
+  }
+
+ // 辅助函数：生成每日景点列表 HTML（完全匹配你的历史记录数据结构）
+function renderDayList(days){
+  if (!Array.isArray(days) || days.length === 0) {
+    return "<p style='margin:8px 0 0 0;color:#666;'>No daily details available.</p>";
+  }
+  let html = "";
+  days.forEach((dayObj, i) => {
+    const dayNumber = (typeof dayObj.day === 'number') ? dayObj.day : (i + 1);
+    // 关键：渲染简化景点列表（仅显示景点名，不显示冗余信息）
+    const spots = (Array.isArray(dayObj.spots) ? dayObj.spots.join(" → ") : (dayObj.placeNames ? dayObj.placeNames.join(" → ") : ""));
+    const dist = (typeof dayObj.distance === 'number') ? dayObj.distance.toFixed(2) : (dayObj.distance ? String(dayObj.distance) : "0.00");
+    html += `<p style="margin:8px 0;"><strong>Day ${dayNumber}:</strong> ${spots || "—"} (${dist} km)</p>`;
+  });
+  return html;
+}
+</script>
+
+</body>
+</html>

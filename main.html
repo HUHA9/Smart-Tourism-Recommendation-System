@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travel Recommendation System</title>
+<style>
+  /* ===== 全局重置 & 字体 ===== */
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+  html,body{height:100%;}
+  
+  /* 背景图（旅游风：蓝天/海滩/山景） */
+  body{
+    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+    background-size: cover;
+    color:#333;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding-top:70px; /* 为固定 header 留出空间，避免内容被遮挡 */
+  }
+  
+  /* 顶部导航（透明 -> 滚动变色） */
+  header{
+    position:fixed; top:0; left:0; width:100%;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 28px; z-index:1100;
+    transition:all .35s ease;
+    background:transparent;
+  }
+  header.scrolled{
+    background: rgba(30,144,255,0.92);
+    box-shadow:0 6px 24px rgba(0,0,0,0.18);
+  }
+  .logo{font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.25);}
+  .user-info{display:flex;align-items:center;gap:10px;}
+  .user-info span{color:#fff;font-weight:500;}
+  
+  /* 按钮（半透明白 + hover 变蓝） */
+  .logout-btn,.history-btn,.mytrip-btn{
+    background: rgba(255,255,255,0.95);
+    color:#1e90ff;
+    border:none;
+    padding:7px 12px;border-radius:18px;cursor:pointer;font-weight:700;
+    transition:all .22s ease;
+  }
+  .logout-btn:hover,.history-btn:hover,.mytrip-btn:hover{
+    background:#1e90ff;color:#fff;transform:translateY(-2px);
+  }
+  /* like 按钮（半透明白 + hover 变蓝） */
+  .liked-btn {
+  background: rgba(255,255,255,0.95);
+  color: #1e90ff;   
+  border: none;
+  padding: 7px 12px;
+  border-radius: 18px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all .22s ease;
+}
+
+.liked-btn:hover {
+  background: #1e90ff;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+  /* hero（首页大背景 + 标题） */
+  .hero{
+    height:50vh; display:flex; align-items:center; justify-content:center; text-align:center; position: relative;
+  overflow: hidden;
+    color:#fff; text-shadow:0 6px 18px rgba(0,0,0,0.45);
+    margin-bottom:36px; padding:12px;
+  }
+  .hero h1{font-size:44px; font-weight:800; letter-spacing:0.6px; margin-bottom:8px;}
+  .hero p{font-size:16px; opacity:0.95; margin-top:6px;}
+  
+  .hero-content {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: heroFadeUp 1.2s ease forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes heroFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+  /* 主容器：白色半透明卡片玻璃风 */
+  .main-container{max-width:1200px;margin:0 auto 60px;padding:0 20px;display:flex;gap:30px;flex-wrap:wrap;}
+  .left-section{flex:1;min-width:320px;}
+  .right-section{flex:1;min-width:320px;}
+  
+  .plan-section,.recommendations,.right-section{
+    background: rgba(255,255,255,0.95);
+    border-radius:14px; padding:22px; box-shadow:0 8px 28px rgba(6,30,80,0.12);
+    backdrop-filter: blur(6px);
+  }
+  
+  /* 标题样式 */
+  h2{color:#1e90ff;margin-bottom:12px;border-bottom:2px solid rgba(30,144,255,0.08);padding-bottom:8px;}
+  
+  /* 表单输入 */
+  .form-group{margin-bottom:14px;}
+  label{display:block;margin-bottom:8px;color:#444;font-weight:600;}
+  input,select,textarea{
+    width:100%;padding:10px;border:1px solid #e3e8ef;border-radius:8px;font-size:15px;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:#1e90ff;box-shadow:0 4px 14px rgba(30,144,255,0.08);}
+  
+  /* 提交按钮 */
+  .submit-btn{
+    background:#1e90ff;color:#fff;border:none;padding:12px;border-radius:10px;width:100%;font-weight:800;cursor:pointer;
+  }
+  .submit-btn:hover{background:#187bcd;transform:translateY(-2px);}
+  
+  /* 目的地网格（卡片间距更大、卡片更高） */
+  .destinations-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.destination-card {
+  width: 300px;   /* 固定宽度 */
+  height: 360px;  /* 稍微拉长 */
+  flex-grow: 1;
+  background: rgba(255,255,255,0.95);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+/* ===== Scroll Animation: initial state ===== */
+.destination-card {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+/* ===== Scroll Animation: when visible ===== */
+.destination-card.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.destination-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(30,144,255,0.2);
+}
+
+.destination-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover 提示层 */
+.destination-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 144, 255, 0.75);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+/* hover 时出现 */
+.destination-card:hover .destination-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+  .destination-img{height:220px;background-size:cover;background-position:center;flex-shrink:0;}
+  .destination-info{padding:14px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;}
+  .destination-name{font-weight:800;color:#1e90ff;font-size:18px;margin-bottom:6px;}
+  .destination-desc{color:#556;font-size:14px;}
+  
+  /* 推荐卡片（稍大） */
+  .rec-card{display:flex;gap:16px;align-items:flex-start;padding:14px;border-radius:12px;margin-bottom:14px;
+    background:rgba(255,255,255,0.98);box-shadow:0 6px 18px rgba(8,20,60,0.06);border:1px solid rgba(30,144,255,0.04);}
+  .rec-img{width:180px;height:140px;background-size:cover;background-position:center;border-radius:10px;flex-shrink:0;}
+  .rec-content{flex:1;}
+  .rec-title{font-weight:700;color:#1e90ff;margin-bottom:6px;}
+  .rec-details{color:#556;font-size:14px;margin-bottom:8px;}
+  .rec-price{color:#e74c3c;font-weight:800;}
+  
+  /* 模态框 */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);z-index:2200;}
+  .modal-content{background:#fff;border-radius:12px;padding:20px;max-width:900px;width:92%;max-height:82vh;overflow:auto;box-shadow:0 20px 60px rgba(5,20,50,0.28);}
+  
+  /* footer */
+  /* ====== FOOTER (DARKER BLUE TRANSPARENT BOX) ====== */
+footer {
+  background: rgba(20, 80, 160, 0.88); /* 更深的蓝色，更柔和 */
+  color: #f0f8ff;
+  padding: 40px 30px 20px;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+  margin-top: 60px;
+}
+
+.footer-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+/* 左侧：网站名称 + tagline */
+.footer-left h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;              /* 改成纯白 */
+  text-shadow: 0 2px 6px rgba(0,0,0,0.3); /* 增加阴影，清晰可见 */
+  margin-bottom: 8px;
+}
+
+.footer-left .tagline {
+  font-size: 15px;
+  color: #dce8f8;              /* 比背景亮一点的浅蓝灰 */
+  letter-spacing: 0.5px;
+}
+
+/* 中间分隔线 */
+.footer-divider {
+  width: 2px;
+  height: 80px;
+  background: rgba(255,255,255,0.25);
+}
+
+/* 右侧：联系方式与社交 */
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.footer-right .contact-info p {
+  margin: 4px 0;
+  font-size: 15px;
+  color: #f1f6ff;              /* 比纯白稍淡一点 */
+}
+
+.footer-social {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  font-size: 28px;
+  margin-top: 8px;
+}
+
+.footer-social a {
+  color: #ffffff;
+  text-decoration: none;
+  transition: transform 0.3s, color 0.3s;
+}
+
+.footer-social a:hover {
+  transform: scale(1.25);
+  color: #aee0ff;              /* hover 时变浅蓝 */
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 25px;
+  font-size: 13px;
+  color: #eaf2ff;
+  opacity: 0.9;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  padding-top: 15px;
+}
+
+/* 响应式 */
+@media (max-width: 700px) {
+  .footer-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .footer-divider {
+    display: none;
+  }
+  .footer-right {
+    align-items: center;
+  }
+}
+
+  /* 响应式 */
+  @media(max-width:900px){
+    .hero h1{font-size:32px}
+    .main-container{flex-direction:column;padding:12px}
+    .destination-card{height:auto}
+    .rec-card{flex-direction:column}
+    .rec-img{width:100%;height:160px}
+  }
+  .destinations-subtitle {
+  margin-top: 6px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  color: #6b7280; /* 高级灰 */
+  font-style: italic;
+}
+/* ===== Slim light-blue horizontal strip (background only) ===== */
+.destinations-header {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+
+  padding: 5px 40px;
+  margin-bottom: 32px;
+
+  background: linear-gradient(
+    to right,
+    rgba(30, 144, 255, 0.08),
+    rgba(30, 144, 255, 0.18),
+    rgba(30, 144, 255, 0.08)
+  );
+
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+
+
+  </style>
+  
+</head>
+<body>
+      
+<header>
+<div class="logo">GoTrip-Travel Recommender</div>
+<div class="user-info">
+<span>Welcome, <span id="displayUsername"></span></span>
+<button class="history-btn" id="historyBtn">My Travel History</button>
+<button class="mytrip-btn" id="mytripBtn">My Trip</button>
+<button class="liked-btn" id="likedBtn">❤️ Liked</button>
+<button class="logout-btn" id="logoutBtn">Logout</button>
+
+</div>
+</header>
+<!-- HERO: 全屏/大背景标题区域 -->
+<section class="hero">
+  <div class="hero-content">
+    <h1>Discover Your Next Adventure</h1>
+    <p>Find curated itineraries, attractions and travel plans — tailored for you.</p>
+  </div>
+</section>
+
+
+
+<div class="main-container">
+
+</div>
+<div class="destinations-section">
+
+  <div class="destinations-header">
+    <h2 class="destinations-title">Popular Destinations</h2>
+    <p class="destinations-subtitle">
+      Click a city to view attractions and generate optimized itineraries
+    </p>
+  </div>
+
+  <div class="destinations-grid" id="destinationsGrid">
+    <!-- Destination cards -->
+  </div>
+
+</div>
+
+
+</div>
+
+<div class="modal" id="destinationModal">
+<div class="modal-content">
+<span class="close-btn" id="closeModalBtn">&times;</span>
+<div class="destination-details" id="destinationDetails">
+<!-- Destination details will be generated here -->
+</div>
+</div>
+</div>
+
+<div class="modal" id="historyModal">
+<div class="modal-content">
+<span class="close-btn" id="closeHistoryModalBtn">&times;</span>
+<h2>My Travel History</h2>
+<div id="historyList">
+<!-- Travel history will be displayed here -->
+<p>No travel history yet. Start planning your next trip!</p>
+</div>
+</div>
+</div>
+
+<footer>
+  <div class="footer-container">
+
+    <!-- 左侧 -->
+    <div class="footer-left">
+      <h2>Travel Recommender</h2>
+      <p class="tagline">Trust us, safe and secure.</p>
+    </div>
+
+    <!-- 中间分隔线 -->
+    <div class="footer-divider"></div>
+
+    <!-- 右侧 -->
+    <div class="footer-right">
+      <div class="contact-info">
+        <p><strong>📞 Phone:</strong> +1 (555) 123-4567</p>
+        <p><strong>✉️ Email:</strong> info@travelrecommender.com</p>
+      </div>
+
+      <div class="footer-social">
+        <a href="#" title="Instagram">📷</a>
+        <a href="#" title="Facebook">👍</a>
+        <a href="#" title="WeChat">💬</a>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-bottom">&copy; 2025 Travel Recommendation System. All rights reserved.</p>
+</footer>
+
+
+<script>
+  // 导航滚动变色：添加/移除 header.scrolled
+(function(){
+  const header = document.querySelector('header');
+  if(!header) return;
+  function onScroll(){
+    if(window.scrollY > 60) header.classList.add('scrolled');
+    else header.classList.remove('scrolled');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+// Display username
+const username = localStorage.getItem('username');
+document.getElementById('displayUsername').textContent = username || 'Guest';
+
+// My Trip 按钮功能
+document.getElementById('mytripBtn').addEventListener('click', function() {
+    window.location.href = 'mytrip.html';
+});
+
+//liked按钮功能
+document.getElementById('likedBtn').addEventListener('click', function () {
+  window.location.href = 'liked.html';
+});
+
+// Logout functionality
+document.getElementById('logoutBtn').addEventListener('click', function() {
+localStorage.removeItem('username');
+localStorage.removeItem('phone');
+window.location.href = 'index.html';
+});
+
+// History button functionality
+const historyBtn = document.getElementById('historyBtn');
+const historyModal = document.getElementById('historyModal');
+const closeHistoryModalBtn = document.getElementById('closeHistoryModalBtn');
+
+historyBtn.addEventListener('click', function() {
+historyModal.style.display = 'flex';
+});
+
+closeHistoryModalBtn.addEventListener('click', function() {
+historyModal.style.display = 'none';
+});
+
+// Destination data with attractions
+const destinations = [
+// 外国地点
+{
+id: 1,
+name: 'Paris',//巴黎
+image: 'https://images.unsplash.com/photo-1431274172761-fca41d930114?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'The city of love and lights',
+details: 'Paris is the capital of France, known for its art, fashion, gastronomy and culture. The 19th-century cityscape is crisscrossed by wide boulevards and the River Seine. Major landmarks include the Eiffel Tower, Notre-Dame Cathedral and the Louvre Museum.',
+attractions: [
+{
+name: 'Eiffel Tower',
+image: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Iconic iron tower offering city views and dining options'
+},
+{
+name: 'Louvre Museum',
+image: 'https://images.unsplash.com/photo-1444418776041-9c7e33cc5a9c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'World\'s largest art museum and historic monument'
+},
+{
+name: 'Notre-Dame Cathedral',
+image: 'https://img95.699pic.com/photo/50123/5271.jpg_wh860.jpg',
+description: 'Medieval Catholic cathedral with Gothic architecture'
+},
+{
+name: 'Champs-Élysées',
+image: 'https://www.egali.com.br/wp-content/uploads/2019/12/flynn-zhou-NVGqJvdyQLs-unsplash-1.jpg',
+description: 'A world-famous avenue known for its theaters, cafés, and luxury shops.'
+},
+{
+name: 'Palace of Versailles',
+image: 'https://pic.yupoo.com/fotomag/ad6b2527/843e3d71.jpg',
+description: 'A grand palace and former royal residence, renowned for its gardens and Hall of Mirrors.'
+}
+]
+},
+{
+id: 2,
+name: 'Tokyo',//东京
+image: 'https://images.unsplash.com/photo-1492571350019-22de08371fd3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Vibrant metropolis blending tradition and modernity',
+details: 'Tokyo, Japan\'s busy capital, mixes the ultramodern and the traditional, from neon-lit skyscrapers to historic temples. Must-visit spots include the Meiji Shinto Shrine, the Imperial Palace and the bustling Shibuya Crossing.',
+attractions: [
+{
+name: 'Shibuya Crossing',
+image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'World\'s busiest pedestrian crossing with neon lights'
+},
+{
+name: 'Meiji Shrine',
+image: 'https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Tranquil Shinto shrine surrounded by forest'
+},
+{
+name: 'Tokyo Tower',
+image: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Eiffel Tower-inspired landmark with observation decks'
+},
+{
+name: 'Senso-ji Temple',
+image: 'https://tmyun.com/jpeg/yun_17964.jpg',
+description: 'Tokyo’s oldest temple, located in the historic Asakusa district.'
+},
+{
+name: 'Tokyo Skytree',
+image: 'https://s1.kkday.com/images/product/10759/20170116074826_VMRPO.jpg',
+description: 'The tallest structure in Japan with observation decks and a shopping complex.'
+}
+]
+},
+{
+id: 3,
+name: 'Rome',//罗马
+image: 'https://images.unsplash.com/photo-1529260830199-42c24126f198?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Eternal city with ancient history',
+details: 'Rome is the capital of Italy and was once the center of the ancient Roman Empire. Must-see attractions include the Colosseum, Roman Forum, Pantheon and Vatican City, home to St. Peter\'s Basilica and the Vatican Museums.',
+attractions: [
+{
+name: 'Colosseum',
+image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+description: 'Ancient amphitheater that held gladiator contests'
+},
+{
+name: 'Trevi Fountain',
+image: 'https://youimg1.c-ctrip.com/target/1006160000010gnh156CC.jpg',
+description: 'Baroque fountain where visitors toss coins'
+},
+{
+name: 'Pantheon',
+image: 'https://youimg1.c-ctrip.com/target/100d0y000000mai8r2FF0.jpg',
+description: 'Ancient Roman temple with a domed roof'
+},
+{
+name: 'St. Peter’s Basilica',
+image: 'https://img1.qunarzz.com/travel/d4/1805/27/3da46a32449c2bb5.jpg',
+description: 'A Renaissance-era basilica in Vatican City, home to iconic art and architecture.'
+},
+{
+name: 'Roman Forum',
+image: 'https://youimg1.c-ctrip.com/target/100m1c000001dol2jC1EC.jpg',
+description: 'Ruins of ancient government buildings at the heart of ancient Rome.'
+}
+]
+},
+// 中国地点
+
+  {
+    id: 4,
+    name: 'Beijing',//北京
+    image: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    description: 'The capital of China, rich in historical and cultural heritage.',
+    details: 'Beijing is a historic and cultural city in China, home to famous sites like the Forbidden City, the Great Wall, and the Temple of Heaven. It is also a modern international metropolis.',
+    attractions: [
+      {
+        name: 'Forbidden City',
+        image: 'https://www.beijing.gov.cn/renwen/rwzyd/bwg/ggbwy/202301/W020230302518258830828.jpg',
+        description: 'Ancient imperial palace complex, a UNESCO World Heritage Site.'
+      },
+      {
+        name: 'Great Wall',
+        image: 'https://images.chinahighlights.com/allpicture/2014/07/a75e71599fcc40d1b72fb2b8_cut_800x500_61.jpg',
+        description: 'One of the New Seven Wonders of the World, ancient military defense project.'
+      },
+      {
+        name: 'Temple of Heaven',
+        image: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        description: 'Site of imperial ceremonies for worship and harvest prayers during Ming and Qing dynasties.'
+      },
+      {
+        name: 'Summer Palace',
+        image: 'https://www.bijingdi.com/uploadfile/2021/1127/20211127195738699.jpg',
+        description: 'Chinese imperial garden during the Qing Dynasty.'
+      },
+      {
+        name: 'National Museum of China',
+        image: 'https://youimg1.c-ctrip.com/target/10051f000001gsu0v03DD_D_10000_1200.jpg?proc=autoorient',
+        description: 'The National Museum of China has a history of more than 100 years, with a building area of ​​nearly 200,000 square meters and more than 1.4 million collections..'
+      }
+    ]
+  },
+  {
+    id: 5,
+    name: 'Shanghai',//上海
+    image: 'https://pic.616pic.com/bg_w1180/00/06/51/KI1O6vvnbQ.jpg!/fw/1120',
+    description: 'The most international city in China.',
+    details: 'Shanghai is China’s center for economy, finance, trade, and shipping. Landmarks like the Bund and Oriental Pearl Tower show its blend of Eastern and Western cultures.',
+    attractions: [
+      {
+        name: 'The Bund',
+        image: 'https://youimg1.c-ctrip.com/target/tg/056/322/802/e6d37f503b5c462d929e84659cffb134.jpg',
+        description: 'Historical waterfront buildings by the Huangpu River, iconic Shanghai view.'
+      },
+      {
+        name: 'Oriental Pearl Tower',
+        image: 'https://www.brandinginasia.com/wp-content/uploads/2020/08/Shanghai-Branding-in-Asia.jpg',
+        description: 'Famous TV tower offering panoramic views of the city.'
+      },
+      {
+        name: 'Shanghai Disneyland',
+        image: 'https://youimg1.c-ctrip.com/target/10051f000001gsqk8D0BC_D_10000_1200.jpg?proc=autoorient',
+        description: 'A fantasy world full of joy and surprises.'
+      },
+      {
+      name: 'Yu Garden',
+      image: 'https://www.asiaodysseytravel.com/images/china-tours/group-tours/yu-garden-700-2.jpg',
+      description: 'A classical Chinese garden with pavilions, rockeries, and ponds.'
+    },
+    {
+      name: 'Nanjing Road',
+      image: 'https://pic1.k1u.com/k1u/mb/d/file/20200529/1590747196668672_836_10000.jpg',
+      description: 'A major shopping street known for its bright lights and vibrant atmosphere.'
+    }
+    ]
+  },
+  {
+    id: 6,
+    name: 'Xi’an',//西安
+    image: 'https://img1.qunarzz.com/travel/poi/1806/1e/e39e64be5446d537.jpg?ver=1',
+    description: 'A historic and cultural city of China.',
+    details: 'Xi’an is the starting point of the Silk Road and one of China’s Four Great Ancient Capitals. It features many historical sites like the Terracotta Army and Giant Wild Goose Pagoda.',
+    attractions: [
+      {
+        name: 'Terracotta Army',
+        image: 'https://ma7media.storage.googleapis.com/sites/default/files/styles/freeform_large_9_2x/s3/migrated/pictures/archiv_agy/2015/201505040925120.002.jpg?itok=aomAkGyM',
+        description: 'Burial pits of Emperor Qin Shi Huang, known as the Eighth Wonder of the World.'
+      },
+      {
+        name: 'Giant Wild Goose Pagoda',
+        image: 'https://www.chinatoursnet.com/uploads/main/litimg/2019-05-27/5ceb3d0638884.jpg',
+        description: 'Tang Dynasty Buddhist pagoda where monk Xuanzang translated scriptures.'
+      },
+      {
+        name: 'Datang Everbright City',
+        image: 'https://n.sinaimg.cn/sinakd20210222ac/725/w2000h1125/20210222/0b8c-kkmphps1384742.jpg',
+        description: 'With the prosperous Tang Dynasty culture as its background, it integrates cultural display, sightseeing, leisure and entertainment, shopping and dining. It is a landmark attraction and cultural business card of Xian.'
+      },
+      {
+      name: 'Ancient City Wall',
+      image: 'https://pic.52112.com/180702/JPG-180702_364/pt0zgIza7J_small.jpg',
+      description: 'A well-preserved fortification surrounding the old city of Xi’an.'
+    },
+{
+      name: 'Bell Tower of Xi’an',
+      image: 'https://youimg1.c-ctrip.com/target/100c0d0000006tbbg5863.jpg',
+      description: 'A symbol of Xi’an, located at the city’s center.'
+    }
+    ]
+  },
+  {
+    id: 7,
+    name: 'Kuala Lumpur',//吉隆坡
+    image: 'https://vincentloy.wordpress.com/wp-content/uploads/2017/07/35760010171_ef3509b067_h.jpg?w=584',
+    description: 'The capital of Malaysia.',
+    details: 'Kuala Lumpur is Malaysia’s capital, a modern city blending multicultural traditions, with landmarks like the Petronas Twin Towers.',
+    attractions: [
+      {
+        name: 'Petronas Twin Towers',
+        image: 'https://wallpaperaccess.com/full/6217300.jpg',
+        description: 'Iconic skyscrapers, the tallest twin towers in the world.'
+      },
+      {
+        name: 'Merdeka Square',
+        image: 'https://dimg04.c-ctrip.com/images/02Y0e120009f1wvxxEA50_R_1080_808_Q90.jpg',
+        description: 'Historic site marking Malaysia’s independence.'
+      },
+      {
+        name: 'Petaling Street',
+        image: 'https://tr-osdcp.qunarzz.com/tr-osd-tr-space/img/9b1c8952d39b6345fb7e2a61c72979a5.jpg_480x360x95_8ca79e8f.jpg',
+        description: 'Kuala Lumpur’s Chinatown, known for shopping and street food.'
+      },
+      {
+      name: 'Batu Caves',
+      image: 'https://n.sinaimg.cn/sinacn20123/213/w2048h1365/20190315/5487-hufnxfn9661372.jpg',
+      description: 'A limestone hill with a series of caves and Hindu shrines.'
+    },
+   
+    {
+      name: 'Bukit Bintang',
+      image: 'https://i.ytimg.com/vi/EyZ4d_GmQ6g/maxresdefault.jpg',
+      description: 'A lively shopping and entertainment district in central Kuala Lumpur.'
+    }
+    ]
+  },
+  {
+    id: 8,
+    name: 'Penang',//槟城
+    image: 'https://img1.qunarzz.com/travel/d9/1701/77/02d9a4cc890844b5.jpg_r_1360x1360x95_de462271.jpg',
+    description: 'Malaysia’s food paradise.',
+    details: 'Penang is famous for its cuisine and cultural heritage. George Town’s street art and multicultural architecture attract visitors from around the world.',
+    attractions: [
+      {
+        name: 'George Town Murals',
+        image: 'https://youimg1.c-ctrip.com/target/tg/107/550/624/7cc37cf6936246e1ad5c130befc84844.jpg',
+        description: 'Iconic street art, perfect for photo spots.'
+      },
+      {
+        name: 'Penang Hill',
+        image: 'https://tr-osdcp.qunarzz.com/tr-osd-tr-space/img/911209c1ffda17db8f2fe0397f049b08.jpg_480x360x95_c99ce9bb.jpg',
+        description: 'Highest point in Penang, offering panoramic city views.'
+      },
+      {
+        name: 'Kek Lok Si Temple',
+        image: 'https://media.istockphoto.com/id/1987296367/zh/%E7%85%A7%E7%89%87/kek-lok-si-temple-in-george-town.jpg?s=1024x1024&w=is&k=20&c=91w-WC2qnkD97KQl3VgUJBADhl6YupYvcDEIsJmI9_E=',
+        description: 'One of the most important Buddhist temples in Malaysia.'
+      },
+      {
+      name: 'Penang Peranakan Mansion',
+      image: 'https://thesmartlocal.my/wp-content/uploads/2022/09/image16-5-667x500.jpg',
+      description: 'A heritage mansion showcasing Peranakan culture and antiques.'
+    },
+    {
+      name: 'Gurney Drive',
+      image: 'https://www.anjnaglobal.com/img/Malaysia-Attraction-Tours/banner/Gurney-Drive.png',
+      description: 'A popular seafront promenade known for hawker food and shopping.'
+    }
+    ]
+  },
+  {
+    id: 9,
+    name: 'Langkawi',//兰卡威
+    image: 'https://img1.qunarzz.com/travel/d8/1703/9b/a4ace83b30185b5.jpg_r_1360x1360x95_ae5e9df3.jpg',
+    description: 'Malaysia’s resort paradise.',
+    details: 'Langkawi is famous for its beaches, duty-free shopping, and natural scenery—an ideal destination for relaxation.',
+    attractions: [
+      {
+        name: 'Sky Bridge',
+        image: 'https://img.freepik.com/photos-gratuite/structure-metallique-entre-montagnes_1122-2204.jpg?w=996&t=st=1697330142~exp=1697330742~hmac=9ca8e3ba51eb0e2db239d94364a4a5b832505ee8fcf6e7c84e7fdec38421075b',
+        description: 'Suspended steel bridge offering thrilling mountain views.'
+      },
+      {
+        name: 'Pantai Cenang',
+        image: 'https://cdn.pixabay.com/photo/2016/09/07/06/23/beach-1650889_1280.jpg',
+        description: 'Popular beach with white sands and clear water.'
+      },
+      {
+        name: 'Mangrove Forest',
+        image: 'https://langkawi-travel-6868.com/wp-content/uploads/2019/03/Langkawi-Eagle-Watching-02.jpg',
+        description: 'Unique ecosystem with boat tours available.'
+      },
+      {
+      name: 'Eagle Square',
+      image: 'https://img1.qunarzz.com/travel/d8/1703/7b/7e7843e1564c65b5.jpg_r_640x426x70_4709b834.jpg',
+      description: 'A prominent landmark featuring a giant eagle statue near the waterfront.'
+    },
+    {
+      name: 'Telaga Tujuh Waterfalls',
+      image: 'https://img1.qunarzz.com/piao/fusion/1611/66/45a926c00de45002.jpg',
+      description: 'The scenery around Qixianjing is full of green forests, and you can enjoy the whole mountain scenery.'
+    }
+    ]
+  }
+];
+
+
+        /// Generate destination cards
+       const destinationsGrid = document.getElementById('destinationsGrid');
+
+         destinations.forEach(destination => {
+         const card = document.createElement('div'); 
+         card.className = 'destination-card';
+         card.innerHTML = `
+               <div class="destination-img" style="background-image: url(${destination.image})"></div>
+               <div class="destination-overlay"> View Attractions →   </div>
+               <div class="destination-info">
+              <div class="destination-name">${destination.name}</div>
+            <div class="destination-desc">${destination.description}</div>
+         </div>
+          `;
+
+      card.addEventListener('click', () => showDestinationModal(destination));
+      destinationsGrid.appendChild(card);
+    
+    // 修改点击事件，直接跳转到城市详情页
+    card.addEventListener('click', () => window.location.href = `city.html?id=${destination.id}`);
+    destinationsGrid.appendChild(card);
+});
+
+// 保留模态框功能，但添加跳转按钮
+function showDestinationModal(destination) {
+    let attractionsHtml = '';
+    destination.attractions.forEach(attraction => {
+        attractionsHtml += `
+            <div class="attraction-card">
+                <div class="attraction-img" style="background-image: url(${attraction.image})"></div>
+                <div class="attraction-info">
+                    <div class="attraction-name">${attraction.name}</div>
+                    <div class="attraction-desc">${attraction.description}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    destinationDetails.innerHTML = `
+        <img src="${destination.image}" alt="${destination.name}">
+        <h3>${destination.name}</h3>
+        <p>${destination.details}</p>
+        <h4 style="margin: 20px 0 10px; color: #1e90ff;">Top Attractions</h4>
+        <div class="attractions-grid">
+            ${attractionsHtml}
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+          <button class="rec-btn" onclick="
+  addToPlan({
+    id: '${destination.id}',
+    name: '${destination.name}',
+    city: '${destination.name}',
+    lat: 0,
+    lng: 0,
+    image: '${destination.image}',
+    durationMinutes: 90
+  })
+">Add to Plan</button>
+
+
+<button class="rec-btn" onclick="
+  addToPlan({
+    id: '${destination.id}',
+    name: '${destination.name}',
+    city: '${destination.name}',
+    lat: 0,
+    lng: 0,
+    image: '${destination.image}',
+    durationMinutes: 90
+  })
+">Add to Plan</button>
+
+        </div>
+    `;
+
+    destinationModal.style.display = 'flex';
+}
+
+
+        // Destination dropdown functionality
+        const destinationInput = document.getElementById('destination');
+        const dropdownArrow = document.getElementById('dropdownArrow');
+        const destinationList = document.getElementById('destinationList');
+
+      
+
+   // Only bind if dropdownArrow exists
+if (dropdownArrow) {
+  dropdownArrow.addEventListener('click', function(e) {
+    // stop propagation to avoid immediately hitting the document click handler
+    e.stopPropagation();
+    if (destinationList && destinationList.style.display === 'block') {
+      destinationList.style.display = 'none';
+    } else if (destinationList) {
+      destinationList.style.display = 'block';
+    }
+  });
+} else {
+  // Optional: log so we know element is missing during development
+  //console.warn('dropdownArrow element not found — dropdown toggle disabled.');
+}
+
+// Close dropdown when clicking outside (use optional chaining to avoid null errors)
+document.addEventListener('click', function(e) {
+  const clickedOutsideInput = destinationInput ? !destinationInput.contains(e.target) : true;
+  const clickedOutsideList = destinationList ? !destinationList.contains(e.target) : true;
+  const clickedOutsideArrow = dropdownArrow ? !dropdownArrow.contains(e.target) : true;
+
+  if (clickedOutsideInput && clickedOutsideList && clickedOutsideArrow) {
+    if (destinationList) destinationList.style.display = 'none';
+  }
+});
+
+        // Show destination modal
+        const destinationModal = document.getElementById('destinationModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const destinationDetails = document.getElementById('destinationDetails');
+
+        function showDestinationModal(destination) {
+            // Generate attractions HTML
+            let attractionsHtml = '';
+            destination.attractions.forEach(attraction => {
+                attractionsHtml += `
+                    <div class="attraction-card">
+                        <div class="attraction-img" style="background-image: url(${attraction.image})"></div>
+                        <div class="attraction-info">
+                            <div class="attraction-name">${attraction.name}</div>
+                            <div class="attraction-desc">${attraction.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            destinationDetails.innerHTML = `
+                <img src="${destination.image}" alt="${destination.name}">
+                <h3>${destination.name}</h3>
+                <p>${destination.details}</p>
+                <h4 style="margin: 20px 0 10px; color: #1e90ff;">Top Attractions</h4>
+                <div class="attractions-grid">
+                    ${attractionsHtml}
+                </div>
+                <button class="rec-btn" onclick="addToPlan('${destination.name}')" style="margin-top: 20px;">Add to Plan</button>
+            `;
+            destinationModal.style.display = 'flex';
+        }
+
+        closeModalBtn.addEventListener('click', () => {
+            destinationModal.style.display = 'none';
+        });
+
+        window.addToPlan = function(destinationName) {
+            document.getElementById('destination').value = destinationName;
+            destinationModal.style.display = 'none';
+        };
+
+        // Form submission
+        const travelForm = document.getElementById('travelForm');
+        const recommendationsSection = document.getElementById('recommendationsSection');
+        const recommendationsList = document.getElementById('recommendationsList');
+
+      
+          
+        
+        // Generate mock recommendations
+        function generateRecommendations(destination, people, days, budget) {
+            const budgets = {
+                low: { min: 30, max: 50 },
+                medium: { min: 50, max: 100 },
+                high: { min: 100, max: 300 }
+            };
+            
+            const range = budgets[budget];
+            const pricePerDay = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+            const totalPrice = pricePerDay * days * people;
+            
+            const images = [
+                'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                'https://images.unsplash.com/photo-1503917988258-f87a78e3c995?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                'https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                'https://images.unsplash.com/photo-1508672019048-805c876b67e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+            ];
+            
+            const types = [
+                'Free & Easy Package',
+                'Group Tour',
+                'Premium Small Group',
+                'Private Customized',
+                'Cultural Experience'
+            ];
+            
+            const recs = [];
+            
+            for (let i = 0; i < 3; i++) {
+                const typeIndex = Math.floor(Math.random() * types.length);
+                const imageIndex = Math.floor(Math.random() * images.length);
+                
+                recs.push({
+                    title: `${destination} ${types[typeIndex]} (${days} days, ${people} people)`,
+                    details: `Includes ${days-1} nights accommodation, attraction tickets, ${i+1} special meals, local guide service`,
+                    price: `Total: $${totalPrice + (i*100)}`,
+                    image: images[imageIndex]
+                });
+            }
+            
+            return recs;
+        }
+
+        
+  // -------- Travel history: save (improved, dedupe & unified structure) --------
+function addToHistory(destination, people, days, budget, opts = {}) {
+  try {
+    const nowDate = new Date().toLocaleDateString();
+    const hist = JSON.parse(localStorage.getItem('travelHistory') || '[]');
+
+    const simpleRoute = opts.simpleRoute || destination || "Trip";
+
+    const newRecord = {
+      tripId: Date.now(),
+      simpleRoute: simpleRoute,
+      date: nowDate,
+      summary: {
+        daysCount: Number(days) || 1,
+        totalDistance: (opts.totalDistance !== undefined) ? String(opts.totalDistance) : "0.00",
+        transport: opts.transport || "driving-car"
+      },
+      meta: {
+        people: people || 1,
+        budget: budget || ''
+      }
+    };
+
+    // 去重：移除已有相同 simpleRoute & 相同 date 的记录（避免重复）
+    const deduped = hist.filter(h => !(h.simpleRoute === newRecord.simpleRoute && h.date === newRecord.date));
+
+    // 将新纪录放到最前面
+    deduped.unshift(newRecord);
+
+    // 写回
+    localStorage.setItem('travelHistory', JSON.stringify(deduped));
+    console.log('✅ addToHistory saved:', newRecord);
+  } catch (e) {
+    console.error('❌ addToHistory failed', e);
+  }
+}
+
+// -------- Travel history: load & render (with Delete button) --------
+function loadHistory() {
+  const history = JSON.parse(localStorage.getItem('travelHistory') || '[]');
+  const historyList = document.getElementById('historyList');
+
+  if (!historyList) {
+    console.warn('historyList element not found');
+    return;
+  }
+
+  if (!history.length) {
+    historyList.innerHTML = '<p>No travel history yet. Start planning your next trip!</p>';
+    return;
+  }
+
+  // 构建 HTML（为每条记录添加 data-id 和删除按钮）
+  let html = '';
+  history.forEach(trip => {
+    const title = trip.simpleRoute || trip.destination || 'Trip';
+    const date = trip.date || '—';
+    const days = (trip.summary && trip.summary.daysCount) ? trip.summary.daysCount : (trip.days || '—');
+    const transport = (trip.summary && trip.summary.transport) ? trip.summary.transport : (trip.transport || '—');
+    const totalDistance = (trip.summary && trip.summary.totalDistance) ? trip.summary.totalDistance : (trip.totalDistance || '—');
+
+    html += `
+      <div class="rec-card" style="margin-bottom: 12px;" data-id="${trip.tripId}">
+        <div class="rec-content">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="rec-title" style="flex:1; margin-right:10px;">${escapeHtml(title)}</div>
+            <div style="flex-shrink:0;">
+              <button class="del-history" data-id="${trip.tripId}" style="background:#ff6b6b;border:none;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer;">Delete</button>
+            </div>
+          </div>
+          <div class="rec-details" style="margin-top:8px;">
+            <p style="margin:4px 0;">Date: ${escapeHtml(date)}</p>
+            <p style="margin:4px 0;">Days: ${escapeHtml(String(days))}</p>
+            <p style="margin:4px 0;">Transport: ${escapeHtml(transport)}</p>
+            <p style="margin:4px 0;">Total Distance: ${escapeHtml(String(totalDistance))} km</p>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  historyList.innerHTML = html;
+
+  // 为每个 Delete 按钮绑定事件
+  const delBtns = historyList.querySelectorAll('.del-history');
+  delBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      if (!id) return;
+      if (!confirm('Delete this history record?')) return;
+
+      const cur = JSON.parse(localStorage.getItem('travelHistory') || '[]');
+      const filtered = cur.filter(r => String(r.tripId) !== String(id));
+      localStorage.setItem('travelHistory', JSON.stringify(filtered));
+
+      // 重新渲染
+      loadHistory();
+    });
+  });
+}
+
+// 简单的 HTML 转义
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, function(m) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+  });
+
+
+
+}
+
+  // ---------- Attach handlers safely ----------
+  document.addEventListener('DOMContentLoaded', function () {
+    const historyBtn = document.getElementById('historyBtn');
+const historyModal = document.getElementById('historyModal');
+const closeHistoryModalBtn = document.getElementById('closeHistoryModalBtn');
+
+// ---------- 安全填充 destinationList（只保留这段） ----------
+(function fillDestinationListOnce(){
+  // 先通过已存在的全局 destinations（如果你在文件顶部定义了），否则从 window.destinations 读取
+  const data = (window.destinations && window.destinations.length) ? window.destinations : (typeof destinations !== 'undefined' ? destinations : []);
+
+  // 确保 destinationList 存在（避免 null）
+  let destinationList = document.getElementById('destinationList');
+  if (!destinationList) {
+    destinationList = document.createElement('div');
+    destinationList.id = 'destinationList';
+    destinationList.style.display = 'none';
+    document.body.appendChild(destinationList);
+  }
+
+  // 清空旧内容（防止重复 append）
+  destinationList.innerHTML = '';
+
+  // 填充
+  data.forEach(dest => {
+    const item = document.createElement('div');
+    item.className = 'destination-item';
+    item.textContent = dest.name || '';
+    item.addEventListener('click', () => {
+      const destinationInput = document.getElementById('destination');
+      if (destinationInput) destinationInput.value = dest.name || '';
+      destinationList.style.display = 'none';
+    });
+    destinationList.appendChild(item);
+  });
+})();
+
+
+if (historyBtn) {
+  historyBtn.addEventListener('click', function() {
+    // 每次打开模态框前刷新历史数据
+    try { loadHistory(); } catch (e) { console.error('loadHistory() not defined or failed', e); }
+    historyModal.style.display = 'flex';
+  });
+}
+
+if (closeHistoryModalBtn) {
+  closeHistoryModalBtn.addEventListener('click', function() {
+    historyModal.style.display = 'none';
+  });
+}
+
+
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // ----- 如果你已经在 main.html 有 destinations 数据数组，可以删除下面这一行的空数组占位并保留原来的 destinations -----
+    const destinations = [ 
+      // 如果你 main.html 已经定义了 destinations，请把这行改为： const destinations = window.destinations || []; 
+      // 我这里暂不填具体项，假设页面已有一份 destinations 数据
+    ];
+  
+    // 确保下拉容器存在（避免 null）
+    if (!document.getElementById('destinationList')) {
+      const dl = document.createElement('div');
+      dl.id = 'destinationList';
+      dl.style.display = 'none';
+      document.body.appendChild(dl);
+    }
+  
+    const destinationsGrid = document.getElementById('destinationsGrid');
+  
+    if (!destinationsGrid) {
+      console.warn('destinationsGrid not found — skipping rendering destination cards');
+    } else {
+      // 如果页面已经有 destinations 变量（在你的文件开头），使用它；否则不要覆盖
+      const data = (window.destinations && window.destinations.length) ? window.destinations : destinations;
+      (data || []).forEach(destination => {
+        const card = document.createElement('div');
+        card.className = 'destination-card';
+        card.innerHTML = `
+          <div class="destination-img" style="background-image: url(${destination.image || ''})"></div>
+          <div class="destination-info">
+            <div class="destination-name">${destination.name || ''}</div>
+            <div class="destination-desc">${destination.description || ''}</div>
+          </div>
+        `;
+  
+        card.addEventListener('click', () => {
+          if (typeof showDestinationModal === 'function') {
+            showDestinationModal(destination);
+          } else {
+            // 如果没有 modal 函数，直接跳转（可选）
+            // window.location.href = `city.html?id=${destination.id}`;
+          }
+        });
+  
+        destinationsGrid.appendChild(card);
+      });
+    }
+  
+    // 目的地下拉列表（若需）
+    const destinationInput = document.getElementById('destination');
+    const destinationList = document.getElementById('destinationList');
+    if (destinationList && destinationInput) {
+      destinationList.innerHTML = '';
+      const data = (window.destinations && window.destinations.length) ? window.destinations : destinations;
+      (data || []).forEach(dest => {
+        const item = document.createElement('div');
+        item.className = 'destination-item';
+        item.textContent = dest.name;
+        item.addEventListener('click', () => {
+          destinationInput.value = dest.name;
+          destinationList.style.display = 'none';
+        });
+        destinationList.appendChild(item);
+      });
+    }
+  
+    // Modal 假如页面已有元素
+    const destinationModal = document.getElementById('destinationModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const destinationDetails = document.getElementById('destinationDetails');
+  
+    // 安全覆写 showDestinationModal（若页面已有同名函数，会被替换）
+    window.showDestinationModal = function(destination) {
+      if (!destinationDetails || !destinationModal) return;
+      let attractionsHtml = '';
+      (destination.attractions || []).forEach(attraction => {
+        attractionsHtml += `
+          <div class="attraction-card">
+            <div class="attraction-img" style="background-image: url(${attraction.image || ''})"></div>
+            <div class="attraction-info">
+              <div class="attraction-name">${attraction.name || ''}</div>
+              <div class="attraction-desc">${attraction.description || ''}</div>
+            </div>
+          </div>
+        `;
+      });
+  
+      destinationDetails.innerHTML = `
+        <img src="${destination.image || ''}" alt="${destination.name || ''}" style="max-width:100%;border-radius:8px;"/>
+        <h3>${destination.name || ''}</h3>
+        <p>${destination.details || ''}</p>
+        <h4 style="margin: 20px 0 10px; color: #1e90ff;">Top Attractions</h4>
+        <div class="attractions-grid">${attractionsHtml}</div>
+        <div style="margin-top: 20px; display:flex; gap:8px;">
+          <button class="rec-btn" id="addToPlanBtn">Add to Plan</button>
+        </div>
+      `;
+  
+      const addBtn = document.getElementById('addToPlanBtn');
+      if (addBtn) {
+        addBtn.onclick = function() {
+          if (window.Trip && typeof window.Trip.addToPlan === 'function') {
+            window.Trip.addToPlan({
+              id: destination.id,
+              name: destination.name,
+              city: destination.name,
+              lat: destination.lat || 0,
+              lng: destination.lng || 0,
+              image: destination.image || '',
+              durationMinutes: destination.durationMinutes || 90
+            });
+          } else {
+            let arr = JSON.parse(localStorage.getItem('myTrip') || '[]');
+            arr.push({
+              id: destination.id,
+              name: destination.name,
+              city: destination.name,
+              lat: destination.lat || 0,
+              lng: destination.lng || 0,
+              image: destination.image || '',
+              durationMinutes: destination.durationMinutes || 90
+            });
+            localStorage.setItem('myTrip', JSON.stringify(arr));
+            alert('Added to My Trip (fallback)');
+          }
+          destinationModal.style.display = 'none';
+        };
+      }
+  
+      destinationModal.style.display = 'flex';
+    };
+  
+    if (closeModalBtn && destinationModal) {
+      closeModalBtn.addEventListener('click', () => destinationModal.style.display = 'none');
+    }
+  
+    // ---------- History handling ----------
+    const historyBtn = document.getElementById('historyBtn');
+    const historyModal = document.getElementById('historyModal');
+    const closeHistoryModalBtn = document.getElementById('closeHistoryModalBtn');
+  
+  
+    if (closeHistoryModalBtn && historyModal) {
+      closeHistoryModalBtn.addEventListener('click', function() {
+        historyModal.style.display = 'none';
+      });
+    }
+  
+  }); // end DOMContentLoaded
+  </script>
+  
+<!-- 新增独立的脚本标签，确保代码优先级最高 -->
+<script>
+  // 等待页面完全加载后再执行（避免元素还没渲染就绑定事件）
+  document.addEventListener('DOMContentLoaded', function() {
+      const travelForm = document.getElementById('travelForm');
+      if (!travelForm) return; // 确保表单存在，防止报错
+  
+      travelForm.addEventListener('submit', function(e) {
+          // 强制阻止所有默认行为和冒泡
+          e.preventDefault();
+          e.stopImmediatePropagation();
+  
+          // 获取表单值（确保元素ID和你的HTML一致）
+          const destination = document.getElementById('destination')?.value;
+          const days = document.getElementById('days')?.value;
+          const budget = document.getElementById('budget')?.value;
+          const people = document.getElementById('people')?.value;
+  
+          // 验证必填项
+          if (!destination) { alert('Please select a destination!'); return; }
+          if (!days) { alert('Please select days!'); return; }
+          if (!budget) { alert('Please select budget!'); return; }
+  
+          // 匹配目标条件
+          let targetBudget = '';
+          if (days === '1' && budget === 'medium') {
+              targetBudget = 'budget';
+          } else if (days === '2' && budget === 'high') {
+              targetBudget = 'luxury';
+          } else {
+              alert('Only support:\n1-Day + Comfort($50-$100) OR 2-Day + Luxury($100+)');
+              return;
+          }
+  
+          // 拼接跳转URL（确保路径正确）
+          const jumpUrl = `travel-plan.html?dest=${encodeURIComponent(destination)}&days=${days}&budget=${targetBudget}`;
+          
+          // 强制跳转（用replace避免表单重复提交）
+          window.location.replace(jumpUrl);
+  
+          // 执行历史记录（如果函数存在）
+          if (window.addToHistory) {
+              addToHistory(destination, people, days, budget);
+          }
+      });
+  });
+  </script>
+  
+<script src="scripts/tripEngine.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const cards = document.querySelectorAll('.destination-card');
+  
+    const observer = new IntersectionObserver(
+      function (entries, observer) {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('show');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.2
+      }
+    );
+  
+    cards.forEach(card => observer.observe(card));
+  });
+  </script>
+  
+</body>
+</html>
+

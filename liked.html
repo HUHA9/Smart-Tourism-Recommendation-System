@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Liked Places</title>
+
+  <style>
+    /* ===== Background ===== */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+      padding: 30px;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 25px;
+    }
+
+    /* ===== Grid Layout ===== */
+    #likedContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    /* ===== Card ===== */
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.2);
+    }
+
+    .place-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 6px;
+    }
+
+    .city-name {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+
+    /* ===== Remove Button ===== */
+    .remove-btn {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+
+    .remove-btn:hover {
+      background: #a93226;
+    }
+
+    /* ===== Empty State ===== */
+    .empty {
+      background: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 14px;
+      color: #444;
+      max-width: 420px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>❤️ My Liked Places</h1>
+<div id="likedContainer"></div>
+
+<script>
+  const liked = JSON.parse(localStorage.getItem('likedPlaces') || '[]');
+  const container = document.getElementById('likedContainer');
+
+  if (liked.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <p>No liked places yet.</p>
+        <p>Explore cities and tap ❤️ Like to save attractions.</p>
+      </div>
+    `;
+  } else {
+    liked.forEach(id => {
+      const div = document.createElement('div');
+      div.className = 'card';
+
+      // 拆解 ID： cityId_place_name
+      const parts = id.split('_');
+      const cityId = parts.shift();
+      const placeName = parts.join(' ').replace(/_/g, ' ');
+
+      let cityName = '';
+      if (cityId === '1') cityName = 'Paris';
+      if (cityId === '2') cityName = 'Tokyo';
+      if (cityId === '3') cityName = 'Rome';
+      if (cityId === '4') cityName = 'Beijing';
+      if (cityId === '5') cityName = 'Shanghai';
+      if (cityId === '6') cityName = 'Xi’an';
+      if (cityId === '7') cityName = 'Kuala Lumpur';
+      if (cityId === '8') cityName = 'Penang';
+      if (cityId === '9') cityName = 'Langkawi';
+
+      div.innerHTML = `
+        <div class="place-name">${placeName}</div>
+        <div class="city-name">📍 ${cityName}</div>
+        <button class="remove-btn" onclick="removeLiked('${id}')">
+          ❌ Remove
+        </button>
+      `;
+
+      container.appendChild(div);
+    });
+  }
+
+  function removeLiked(id) {
+    let liked = JSON.parse(localStorage.getItem('likedPlaces') || '[]');
+    liked = liked.filter(x => x !== id);
+    localStorage.setItem('likedPlaces', JSON.stringify(liked));
+    location.reload();
+  }
+</script>
+
+</body>
+</html>

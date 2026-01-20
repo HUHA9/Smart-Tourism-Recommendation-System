@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trip Plan — Travel Recommender</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand-blue:#1e90ff;
+    --brand-dark:#187bcd;
+    --card-bg: rgba(255,255,255,0.98);
+    --muted:#556;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:'Poppins',sans-serif;
+    background: linear-gradient(180deg, rgba(30,144,255,0.06), rgba(250,250,252,1));
+    -webkit-font-smoothing:antialiased;
+    color:#222;
+    padding-top:78px;
+  }
+
+  /* topbar */
+  header{
+    position:fixed; left:0; right:0; top:0; height:72px;
+    background: linear-gradient(180deg,var(--brand-blue),var(--brand-dark));
+    color:#fff; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 22px; z-index:1100; box-shadow:0 8px 28px rgba(30,144,255,0.12);
+  }
+  .logo{font-weight:800; font-size:20px}
+  .nav-actions{display:flex; gap:10px}
+  .btn{background:#fff;padding:8px 12px;border-radius:16px;color:var(--brand-blue);font-weight:700;border:none;cursor:pointer}
+  .btn:hover{transform:translateY(-2px)}
+
+  .container{max-width:1100px;margin:26px auto;padding:18px}
+  .panel{background:var(--card-bg);border-radius:var(--radius);padding:20px;box-shadow:0 14px 36px rgba(8,18,60,0.06);border:1px solid rgba(30,144,255,0.04)}
+
+  .top-row{display:flex;gap:18px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+  .title{color:var(--brand-blue);font-size:22px;font-weight:800;margin:0}
+  .subtitle{color:var(--muted);font-size:14px;margin:0}
+
+  /* itinerary card */
+  .rec-card{display:flex;gap:20px;align-items:flex-start;border-radius:12px;overflow:hidden;background:#fff;border:1px solid rgba(30,144,255,0.04)}
+  .rec-media{min-width:360px;height:300px;background-size:cover;background-position:center;flex-shrink:0}
+  .rec-body{padding:22px;flex:1}
+  .rec-title{font-size:20px;color:var(--brand-blue);font-weight:800;margin-bottom:8px}
+  .rec-details{color:#333;line-height:1.6;margin-bottom:12px}
+  .rec-price{color:#e74c3c;font-weight:800;margin-bottom:8px}
+
+  .meta-row{display:flex;gap:12px;align-items:center;margin-top:8px}
+  .chip{background:rgba(30,144,255,0.06);color:var(--brand-blue);padding:8px 10px;border-radius:999px;font-weight:600;font-size:13px}
+
+  .back-btn{display:inline-block;margin-top:12px;padding:10px 14px;background:var(--brand-blue);color:#fff;border-radius:10px;text-decoration:none;font-weight:700}
+  .back-btn:hover{background:var(--brand-dark)}
+
+  @media(max-width:900px){
+    .rec-card{flex-direction:column}
+    .rec-media{width:100%;height:220px}
+    .rec-body{padding:16px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Travel Recommender</div>
+  <div class="nav-actions">
+    <button class="btn" onclick="location.href='main.html'">Home</button>
+    <button class="btn" onclick="location.href='mytrip.html'">My Trip</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="panel">
+    <div class="top-row">
+      <div>
+        <h1 class="title">Recommended Itinerary</h1>
+        <p class="subtitle">Automatically generated from your selection — detailed timing, transport and approximate costs included.</p>
+      </div>
+    </div>
+
+    <div id="itineraryContainer" style="margin-top:8px"></div>
+
+    <div id="errorMsg" style="display:none;text-align:center;margin-top:28px;color:#e74c3c;font-weight:700">
+      No matching itinerary found. Please go back and choose a valid combination.
+      <div style="margin-top:12px"><a class="back-btn" href="main.html">← Back to Home</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Map of nicer images for each city (multiple images, we pick representative)
+  const CITY_IMAGES = {
+    "Beijing": {
+      hero: "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?auto=format&w=1600&q=80",
+      alt: "Forbidden City & Great Wall"
+    },
+    "Kuala Lumpur": {
+      hero: "https://as1.ftcdn.net/v2/jpg/07/95/48/56/1000_F_795485693_nKHz43K7w9GfPkHO8FY74biJagefRirN.jpg",
+      alt: "Petronas Twin Towers"
+    }
+  };
+
+  function getQueryParam(name){
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  function createItineraryCard(itinerary){
+    const tpl = document.createElement('div');
+    tpl.className = 'rec-card';
+    tpl.innerHTML = `
+      <div class="rec-media" style="background-image: url('${itinerary.image}')"></div>
+      <div class="rec-body">
+        <div class="rec-title">${itinerary.title}</div>
+        <div class="rec-details">${itinerary.details}</div>
+        <div class="rec-price">${itinerary.price}</div>
+        <div class="meta-row">
+          <div class="chip">${itinerary.durationText}</div>
+          <div class="chip">${itinerary.transportSummary}</div>
+        </div>
+        <div style="margin-top:12px"><a class="back-btn" href="main.html">← Back to Home</a></div>
+      </div>
+    `;
+    return tpl;
+  }
+
+  // Core itinerary generator (keeps 4 routes; choose image per city)
+  function generateItinerary(destination, days, budget){
+    if(!destination) return null;
+    const city = destination.trim();
+    // Images per city
+    const img = CITY_IMAGES[city] ? CITY_IMAGES[city].hero : "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&w=1600&q=60";
+
+    // Keep the textual itineraries but refine formatting
+    if(city === "Beijing" && days === "1" && budget === "budget"){
+      return {
+        title: "Beijing — 1-Day Budget Itinerary ($50–$100)",
+        price: "Estimated Cost: $60–$90 per person",
+        image: img,
+        durationText: "1 day",
+        transportSummary: "Metro + Shared Bus",
+        details: `<strong>08:00</strong> — Subway to Tiananmen East.<br/>
+                  <strong>08:30–11:00</strong> — Forbidden City (self-guided).<br/>
+                  <strong>11:30–12:30</strong> — Lunch at Wangfujing street stalls.<br/>
+                  <strong>13:00–16:30</strong> — Mutianyu Great Wall (shared bus & cable car optional).<br/>
+                  <strong>17:30</strong> — Explore Houhai Hutongs and lakeside.<br/>
+                  <em>Transport:</em> Metro + shared coach, walking.`
+      };
+    }
+    if(city === "Beijing" && days === "2" && budget === "luxury"){
+      return {
+        title: "Beijing — 2-Day Luxury Itinerary ($100+)",
+        price: "Estimated Cost: $220+ per person",
+        image: img,
+        durationText: "2 days",
+        transportSummary: "Private Car + Guide",
+        details: `<strong>Day 1</strong><br/>
+                  09:00 — Private guided Forbidden City VIP entry.<br/>
+                  12:30 — Gourmet Peking Duck lunch.<br/>
+                  14:30 — Private Hutong tour & tea ceremony.<br/>
+                  19:00 — Rooftop dinner.<br/><br/>
+                  <strong>Day 2</strong><br/>
+                  08:00 — Private transfer to Mutianyu Great Wall (cable car included).<br/>
+                  13:00 — Country lunch & spa in the afternoon.`
+      };
+    }
+    if(city === "Kuala Lumpur" && days === "1" && budget === "budget"){
+      return {
+        title: "Kuala Lumpur — 1-Day Budget Itinerary ($50–$100)",
+        price: "Estimated Cost: $50–$90 per person",
+        image: img,
+        durationText: "1 day",
+        transportSummary: "LRT + KTM + Grab",
+        details: `<strong>08:30</strong> — Petronas Twin Towers & KLCC Park.<br/>
+                  <strong>10:00</strong> — Walk Bukit Bintang & Pavilion.<br/>
+                  <strong>12:00</strong> — Jalan Alor street food lunch.<br/>
+                  <strong>14:00–15:30</strong> — Batu Caves (train + short Grab).<br/>
+                  <strong>17:00</strong> — Central Market & Merdeka Square.`
+      };
+    }
+    if(city === "Kuala Lumpur" && days === "2" && budget === "luxury"){
+      return {
+        title: "Kuala Lumpur — 2-Day Luxury Itinerary ($100+)",
+        price: "Estimated Cost: $220+ per person",
+        image: img,
+        durationText: "2 days",
+        transportSummary: "Private Driver + VIP Access",
+        details: `<strong>Day 1</strong><br/>
+                  09:00 — VIP Petronas tour + guide.<br/>
+                  12:30 — Fine dining at signature restaurant.<br/>
+                  15:00 — Private batik workshop.<br/><br/>
+                  <strong>Day 2</strong><br/>
+                  08:30 — Private driver to Putrajaya & premium sightseeing.<br/>
+                  13:00 — Riverside luxury lunch & spa.`
+      };
+    }
+    return null;
+  }
+
+  // On load: read params and render
+  window.addEventListener('load', function(){
+    const destination = getQueryParam('destination') || getQueryParam('dest'); // support both names
+    const days = getQueryParam('days');
+    const budget = getQueryParam('budget');
+
+    const container = document.getElementById('itineraryContainer');
+    const errorMsg = document.getElementById('errorMsg');
+
+    if(!destination || !days || !budget){
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    const itinerary = generateItinerary(destination, days, budget);
+    if(!itinerary){
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    container.innerHTML = '';
+    container.appendChild(createItineraryCard(itinerary));
+    errorMsg.style.display = 'none';
+    // smooth scroll to card
+    setTimeout(()=>{ document.querySelector('.rec-card').scrollIntoView({behavior:'smooth', block:'center'}); }, 120);
+  });
+</script>
+</body>
+</html>

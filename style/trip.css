@@ -1,0 +1,101 @@
+/* style/trip.css */
+.day-card { border: 1px solid #e0e0e0; padding: 12px; margin: 12px 0; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+.day-card h3 { margin: 0 0 10px 0; }
+.place-list { list-style: none; padding: 0; margin: 10px 0; }
+.place-list li { padding: 6px 0; border-bottom: 1px dashed #eee; }
+.itinerary-summary { margin-top: 14px; padding: 10px; border-top: 1px solid #f0f0f0; }
+.rec-item { width: 220px; display:inline-block; margin:8px; vertical-align:top; border:1px solid #ddd; border-radius:6px; overflow:hidden; background:#fff; }
+.rec-item h4 { margin:6px; font-size:14px; }
+.rec-item p { margin: 0 6px 6px 6px; font-size:12px; color:#666; }
+
+.trip-controls-card {
+    max-width: 1100px;
+    margin: 30px auto;
+    background: linear-gradient(180deg, rgba(30,144,255,0.12), rgba(255,255,255,0.7));
+    border: 1px solid rgba(30,144,255,0.18);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 10px 30px rgba(30,144,255,0.06);
+    flex-wrap: wrap;
+  }
+  
+  .trip-controls-card .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .trip-controls-card input[type="number"],
+  .trip-controls-card select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(30,144,255,0.25);
+    background: #fff;
+    font-size: 14px;
+  }
+  /* 主按钮（Generate） */
+.primary-btn {
+  background: linear-gradient(135deg, #3aa0ff, #1e90ff);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(30, 144, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(30, 144, 255, 0.45);
+}
+
+/* 次按钮（Add Top 5） */
+.secondary-btn {
+  background: #ffffff;
+  color: #1e90ff;
+  border: 2px solid #1e90ff;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+  background: #eaf4ff;
+}
+
+  .trip-controls-card .generate-btn {
+    background: #1e90ff;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 6px 18px rgba(30,144,255,0.22);
+  }
+  
+  .trip-controls-card .secondary-btn {
+    background: transparent;
+    color: #1e90ff;
+    border: 1px solid rgba(30,144,255,0.28);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  @media (max-width:700px){
+    .trip-controls-card { gap:10px; padding:12px; }
+    .trip-controls-card .control-group{ width:100%; justify-content:center; }
+  }
+  
